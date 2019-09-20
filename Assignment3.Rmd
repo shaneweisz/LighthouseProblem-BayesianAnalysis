@@ -16,22 +16,107 @@ output:
 load("~/Documents/UCT/3rd Year/STA3043S/Assignments/Assignment3/Assignment3Data2019.RData")
 ```
 
+This assignment involves the use of Bayesian Analysis methods to solve 'The Lighthouse Problem', where we attempt to draw inference on the coordinates of a lighthouse at an unknown location in the sea given a series of flashes emitted by the lighthouse that are observed at different points on the coastline.
+
 ## (i) Derivation of posterior distribution of $\alpha,\beta|x$
+
+We want to derive the posterior distribution of $\alpha,\beta|\boldsymbol{x}$, which can be expressed as:
+$$\pi(\alpha,\beta|\boldsymbol{x}) = \frac{\pi(\alpha,\beta) \text{L}(\alpha,\beta;\boldsymbol{x})}{m(\boldsymbol{x})}= \frac{g(\alpha,\beta;\boldsymbol{x})}{m(\boldsymbol{x})},$$ where 
+$g(\alpha,\beta;\boldsymbol{x})=\pi(\alpha,\beta) \text{L}(\alpha,\beta;\boldsymbol{x})$.
+
+#### Prior Distribution
+
+From the context of the problem, we can make the assumption that $\alpha$ and $\beta$ are independent. As such, we can obtain our prior distribution from $$\pi(\alpha,\beta)=\pi(\alpha)\pi(\beta)$$. 
+
+We are given that $\alpha \sim \text{U}(0,5)$ and $\beta \sim \text{Gamma}(4,8)$, and so substituting the appropriate density functions yields our **prior distribution**: $$\pi(\alpha,\beta)=\pi(\alpha)\pi(\beta) = \frac{1}{5}\frac{8^4 \beta^3 e^{-8\beta}}{\Gamma(4)}=\frac{2048\beta^3 e^{-8\beta}}{15}$$
+
+#### Likelihood
+
+
+
+
+We have that $$\text{L}(\alpha,\beta, \boldsymbol{x})=\prod_{i=1}^n f(x_i|\alpha,\beta)$$
+
+While $$\pi(\alpha,\beta)=\frac{1}{5}\frac{8^4 \beta^3 e^{-8\beta}}{\Gamma(4)}=\frac{2048\beta^3 e^{-8\beta}}{15}$$
+
+$$\pi(\alpha,\beta)=\frac{1}{5}\frac{8^4 \beta^3 e^{-8\beta}}{\Gamma(4)}=\frac{2048\beta^3 e^{-8\beta}}{15}$$
+
+By the Law of Total Probability, we have that m(x) - ...
 
 ## (ii) Function to calculate g($\alpha$,$\beta$;x) and obtain contour plot
 
-```{r gfunc}
 
+```{r loadX}
+x_data = Data['stnjus007',]
+```
+
+```{r gfunc}
+A = function(alpha, beta)
+{
+   return( (atan((5 - alpha) / beta)) - (-atan(alpha / beta)))
+}
+
+L = function(alpha, beta, x)
+{
+   return( prod( (1 / A(alpha, beta)) * beta / (beta ^ 2 + (x - alpha)^2)) )
+}
+
+# Calculates g(alpha,beta;x)
+gfunc = function(alpha, beta, x)
+{
+    return(dunif(alpha, 0, 5) * dgamma(beta, 4, 8) * L(alpha, beta, x))
+}
 ```
 
 ```{r contourPlot}
+n = 101
 
+alpha_range = seq(from = 0, to = 5, length.out = n)
+beta_range = seq(from = 0, to = 1, length.out = n)
+
+mtx = matrix(0, nrow = n, ncol = n)
+for(i in 1:n)
+{
+  for(j in 1:n)
+  {
+    mtx[i,j] = gfunc(alpha_range[i], beta_range[j], x_data)
+  }
+}
+
+library(ContourFunctions)
+
+cf_grid(x = alpha_range, 
+        y = beta_range, 
+        z = mtx, 
+        bar = T,
+        main = "Contour Plot")
 ```
 
 ## (iii) Values of $\alpha$, $\beta$ that maximises $\pi$($\alpha$,$\beta$|x)
 
 ```{r maximise}
 
+gfunc_int = function(params, x)
+{
+    alpha = params[1]
+    beta  = params[2]
+    return( dunif(alpha, 0, 5) * dgamma(beta, 4, 8) * L(alpha, beta, x) )
+}
+
+library(cubature)
+m_x = adaptIntegrate(gfunc_int, lowerLimit = c(0, 0), upperLimit = c(5, 600), x = x_data)$integral
+
+post = function(params, x)
+{
+    alpha = params[1]
+    beta  = params[2]
+    return( -1 * (dunif(alpha, 0, 5) * dgamma(beta, 4, 8) * L(alpha, beta, x) / m_x) )
+}
+
+optim( par = c(2.5,0.9), fn = post, x = x_data,
+       lower = c(0.0001, 0.0001),
+       upper = c(5, Inf),
+       method = "L-BFGS-B")
 ```
 
 ## (iv) Function to obtain marginal distribution of $\alpha|x$ using numerical integration
