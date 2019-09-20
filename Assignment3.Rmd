@@ -1,21 +1,54 @@
 ---
-title: "Assignment 3"
-author: "Shane Weisz"
+title: "Assignment 3: Bayesian Analysis  \nLighthouse Problem\n"
+author: "Shane Weisz (WSZSHA001)"
 date: "19/09/2019"
 output:
-  pdf_document:
-    toc: yes
-    toc_depth: 3
   html_document:
     df_print: paged
     toc: yes
     toc_depth: '3'
+  pdf_document:
+    toc: yes
+    toc_depth: 3
 ---
 
 ```{r loadData, include=FALSE}
 load("~/Documents/UCT/3rd Year/STA3043S/Assignments/Assignment3/Assignment3Data2019.RData")
 ```
 
-## (i) Derivation of posterior distribution of $\alpha$,$\beta$|x
+## (i) Derivation of posterior distribution of $\alpha,\beta|x$
 
 ## (ii) Function to calculate g($\alpha$,$\beta$;x) and obtain contour plot
+
+```{r gfunc}
+
+```
+
+```{r contourPlot}
+
+```
+
+## (iii) Values of $\alpha$, $\beta$ that maximises $\pi$($\alpha$,$\beta$|x)
+
+```{r maximise}
+
+```
+
+## (iv) Function to obtain marginal distribution of $\alpha|x$ using numerical integration
+
+```{r alpham}
+
+```
+
+## (v) Estimates of the posterior mean and variance of $\alpha$
+
+```{r estimates}
+
+```
+
+## (vi) Acceptance-rejection method for inference on $\alpha$
+
+```{r ar}
+
+```
+
