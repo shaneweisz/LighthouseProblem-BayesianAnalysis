@@ -12,11 +12,6 @@ output:
     toc_depth: '3'
 header-includes: \usepackage{float} \makeatletter\renewcommand*{\fps@figure}{H}\makeatother
 ---
-
-```{r loadData, include=FALSE}
-load("~/Documents/UCT/3rd Year/STA3043S/Assignments/Assignment3/Assignment3Data2019.RData")
-```
-
 This assignment involves the use of Bayesian Analysis methods to solve 'The Lighthouse Problem', where we attempt to draw inference on the coordinates of a lighthouse at an unknown location in the sea given a series of flashes emitted by the lighthouse that are observed at different points on the coastline.
 
 ## (i) Derivation of posterior distribution of $\alpha,\beta|x$
@@ -34,10 +29,10 @@ We are given that $\alpha \sim \text{U}(0,5)$ and $\beta \sim \text{Gamma}(4,8)$
 #### Likelihood: $\text{L}(\alpha,\beta$;$\boldsymbol{x}$)
 
 We first note that we calculate the likelihood as follows:
-$$\text{L}(\alpha,\beta, \boldsymbol{x})=\prod_{i=1}^n f(x_i|\alpha,\beta)$$
+$$\text{L}(\alpha,\beta, \boldsymbol{x})=\prod_{i=1}^{200} f(x_i|\alpha,\beta)$$
 
 We thus need to calculate the density function for the data, $f(x_i|\alpha,\beta)$. 
-So let $\theta_i$ be the angle of inclination of the line joining the lighthouse to the point on the coastline where the $i^{th}$ emmission was recorded. It follows that $\tan(\theta_i)=\frac{x_i-\alpha}{\beta}$ and hence that $\theta_l=-\arctan(\frac{\alpha}{\beta})<\theta_k<\arctan(\frac{5-\alpha}{\beta})=\theta_u$.
+So let $\theta_i$ be the angle of inclination of the line joining the lighthouse to the point on the coastline where the $i^{th}$ emission was recorded. It follows that $\tan(\theta_i)=\frac{x_i-\alpha}{\beta}$ and hence that $\theta_l=-\arctan(\frac{\alpha}{\beta})<\theta_k<\arctan(\frac{5-\alpha}{\beta})=\theta_u$.
 
 Now the problem definition allows us to make the assumption that $\theta_i \sim\text{U}(\theta_l,\theta_u)$, which yields the p.d.f. of $\theta_i$ as $\pi(\theta_i)=\frac{1}{\theta_u-\theta_l}=\frac{1}{\text{A}(\alpha,\beta)}$, where we define $\text{A}(\alpha,\beta) = \theta_u-\theta_l$.
 
@@ -45,16 +40,18 @@ Applying an appropriate univariate transformation, we obtain that $f(x_i|\alpha,
 Since $\beta>0$, we get that $\frac{\beta}{\beta^2+(x_k-\alpha)^2}>0$, and so  $f(x_i|\alpha,\beta)=\frac{1}{\text{A}(\alpha,\beta)}\cdot\frac{\beta}{\beta^2+(x_i-\alpha)^2}$.
 
 Substituting into the above formula for the likelihood gives us our **likelihood** function:
-$$\text{L}(\alpha,\beta, \boldsymbol{x})=\prod_{i=1}^n f(x_i|\alpha,\beta) = \prod_{i=1}^n \frac{1}{\text{A}(\alpha,\beta)}\cdot\frac{\beta}{\beta^2+(x_i-\alpha)^2}$$
+$$\text{L}(\alpha,\beta, \boldsymbol{x})=\prod_{i=1}^{200} f(x_i|\alpha,\beta) = \prod_{i=1}^{200} \frac{1}{\text{A}(\alpha,\beta)}\cdot\frac{\beta}{\beta^2+(x_i-\alpha)^2}$$
 
 #### Predictive pdf of x: $m(\boldsymbol{x})$
 
-By the Law of Total Probability, we have that m(x) - ...
+By the Law of Total Probability, we have that $$m(\boldsymbol{x})=\int_{0}^5 \int_{0}^{\infty} \pi(\alpha,\beta) \text{L}(\alpha,\beta;\boldsymbol{x}) d\beta d\alpha$$ where $\pi(\alpha,\beta)=\frac{2048\beta^3 e^{-8\beta}}{15}$ and $\text{L}(\alpha,\beta, \boldsymbol{x})= \prod_{i=1}^{200} \frac{1}{\text{A}(\alpha,\beta)}\cdot\frac{\beta}{\beta^2+(x_i-\alpha)^2}$
 
 ## (ii) Function to calculate g($\alpha$,$\beta$;x) and obtain contour plot
 
-```{r loadX, include=FALSE}
-x_data = Data['stnjus007',]
+
+```{r loadData, include=FALSE}
+load("~/Documents/UCT/3rd Year/STA3043S/Assignments/Assignment3/Assignment3Data2019.RData")
+x_data = Data['dckmat004',]
 ```
 
 The following functions below are used to calculate g($\alpha$,$\beta$;x), by means of helper functions A and L.
@@ -63,20 +60,21 @@ The following functions below are used to calculate g($\alpha$,$\beta$;x), by me
 # A(alpha, beta) is defined as the difference between the upper and lower bounds for theta
 A = function(alpha, beta)
 {
-   return( (atan((5 - alpha) / beta)) - (-atan(alpha / beta)))
+   return( (atan((5 - alpha) / beta)) - (-atan(alpha / beta)) )
 }
 
-# Calculates the likelihood function for alpha and beta given an observed data vector x
+# Returns the likelihood function for alpha and beta given an observed data vector x
 L = function(alpha, beta, x)
 {
    return( prod( (1 / A(alpha, beta)) * beta / (beta ^ 2 + (x - alpha)^2)) )
 }
 
-# Calculates g(alpha,beta;x) - the numerator of the posterior
+# Returns g(alpha,beta;x) - the numerator of the posterior
 gfunc = function(alpha, beta, x)
 {
-    return(dunif(alpha, 0, 5) * dgamma(beta, 4, 8) * L(alpha, beta, x))
+    return( dunif(alpha, 0, 5) * dgamma(beta, shape = 4, rate = 8) * L(alpha, beta, x) )
 }
+gfunc.vec = Vectorize(gfunc, vectorize.args = c("alpha","beta"))
 ```
 
 We use the above function to obtain the following Contour Plot of the joint posterior distribution of the
@@ -85,58 +83,48 @@ two parameters with the $\alpha$-axis ranging between (0, 5) and the $\beta$-axi
 ```{r contourPlot, echo=FALSE, fig.cap="Contour Plot"}
 n = 100
 alpha_range = seq(from = 0, to = 5, length.out = n)
-beta_range = seq(from = 0, to = 1, length.out = n)
+beta_range  = seq(from = 0, to = 1, length.out = n)
+g = outer(alpha_range, beta_range, FUN = gfunc.vec, x_data)
 
-mtx = matrix(0, nrow = n, ncol = n)
-for(i in 1:n)
-{
-  for(j in 1:n)
-  {
-    mtx[i,j] = gfunc(alpha_range[i], beta_range[j], x_data)
-  }
-}
-
-library(ContourFunctions)
-
-cf_grid(x = alpha_range, 
+contour(x = alpha_range, 
         y = beta_range, 
-        z = mtx, 
-        bar = T,
-        main = "Contour Plot")
+        z = g, 
+        xlab=expression(alpha),
+        ylab=expression(beta),
+        main=expression(paste("Proportional to ", pi, "(", alpha, ",", beta, "|x)")), 
+        xlim=range(alpha_range), 
+        ylim=range(beta_range), 
+        col="blue",
+        nlevels = 10)
 ```
 
 ## (iii) Values of $\alpha$, $\beta$ that maximises $\pi$($\alpha$,$\beta$|x)
 
-The appropriate values are **2.41** for alpha and **0.77** for beta.
+The appropriate values are **2.559** for alpha and **0.842** for beta.
 
-```{r maximise, include=FALSE}
-
-gfunc_int = function(params, x)
+```{r maximise, echo=TRUE}
+# A function that returns a value proportional to the negative log of the posterior
+negLogPost = function(params, x)
 {
     alpha = params[1]
     beta  = params[2]
-    return( dunif(alpha, 0, 5) * dgamma(beta, 4, 8) * L(alpha, beta, x) )
+    return( -1 * log( (dunif(alpha, 0, 5) * dgamma(beta, 4, 8) * L(alpha, beta, x)) ) )
 }
 
-library(cubature)
-m_x = adaptIntegrate(gfunc_int, lowerLimit = c(0, 0), upperLimit = c(5, 600), x = x_data)$integral
-
-post = function(params, x)
-{
-    alpha = params[1]
-    beta  = params[2]
-    return( -1 * (dunif(alpha, 0, 5) * dgamma(beta, 4, 8) * L(alpha, beta, x) / m_x) )
-}
-
-estimates = optim( par = c(2.5,0.9), 
-                   fn = post, 
+estimates = optim( par = c(2.5, 0.5), 
+                   fn = negLogPost, 
                    x = x_data,
                    lower = c(0.0001, 0.0001),
                    upper = c(5, Inf),
                    method = "L-BFGS-B")$par
-names(estimates) = c('alpha', 'beta')
-# alpha      beta 
-# 2.4135594 0.7730099 
+# names(estimates) = c('alpha', 'beta')
+
+library(knitr)
+library(kableExtra)
+headings = c('','$\\alpha $', '$\\beta$')
+estimates_mtx <- matrix(c('Estimate', round(estimates,3)), ncol = length(estimates) + 1)
+colnames(estimates_mtx) <- c(headings)
+kable(estimates_mtx, format = 'latex', align="c", escape = F, caption = "Estimates for $\\alpha$ and $\\beta$")  %>% kable_styling(latex_options = c("hold_position"))  
 ```
 
 ## (iv) Function to obtain marginal distribution of $\alpha|x$ using numerical integration
