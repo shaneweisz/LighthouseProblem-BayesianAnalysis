@@ -51,7 +51,7 @@ By the Law of Total Probability, we have that $$m(\boldsymbol{x})=\int_{0}^5 \in
 
 ```{r loadData, include=FALSE}
 load("~/Documents/UCT/3rd Year/STA3043S/Assignments/Assignment3/Assignment3Data2019.RData")
-x_data = Data['dckmat004',]
+x_data = Data['wszsha001',]
 ```
 
 The following functions below are used to calculate g($\alpha$,$\beta$;x), by means of helper functions A and L.
@@ -72,7 +72,9 @@ L = function(alpha, beta, x)
 # Returns g(alpha,beta;x) - the numerator of the posterior
 gfunc = function(alpha, beta, x)
 {
-    return( dunif(alpha, 0, 5) * dgamma(beta, shape = 4, rate = 8) * L(alpha, beta, x) )
+    prior_alpha = dunif(alpha, min = 0, max = 5)
+    prior_beta  = dgamma(beta, shape = 4, rate = 8)
+    return( prior_alpha * prior_beta * L(alpha, beta, x) )
 }
 gfunc.vec = Vectorize(gfunc, vectorize.args = c("alpha","beta"))
 ```
@@ -100,7 +102,7 @@ contour(x = alpha_range,
 
 ## (iii) Values of $\alpha$, $\beta$ that maximises $\pi$($\alpha$,$\beta$|x)
 
-The appropriate values are **2.559** for alpha and **0.842** for beta.
+The appropriate values are **2.5593** for alpha and **0.8415** for beta.
 
 ```{r maximise, echo=TRUE}
 # A function that returns a value proportional to the negative log of the posterior
@@ -108,7 +110,7 @@ negLogPost = function(params, x)
 {
     alpha = params[1]
     beta  = params[2]
-    return( -1 * log( (dunif(alpha, 0, 5) * dgamma(beta, 4, 8) * L(alpha, beta, x)) ) )
+    return( - log( dunif(alpha, 0, 5) * dgamma(beta, 4, 8) * L(alpha, beta, x) ) )
 }
 
 estimates = optim( par = c(2.5, 0.5), 
@@ -117,31 +119,128 @@ estimates = optim( par = c(2.5, 0.5),
                    lower = c(0.0001, 0.0001),
                    upper = c(5, Inf),
                    method = "L-BFGS-B")$par
-# names(estimates) = c('alpha', 'beta')
+names(estimates) = c('alpha', 'beta')
+```
 
+```{r tableForEstimates}
 library(knitr)
 library(kableExtra)
-headings = c('','$\\alpha $', '$\\beta$')
-estimates_mtx <- matrix(c('Estimate', round(estimates,3)), ncol = length(estimates) + 1)
+
+headings = c('$\\alpha $', '$\\beta$')
+
+estimates_mtx <- matrix(c(round(estimates, 4)), ncol = 2)
 colnames(estimates_mtx) <- c(headings)
-kable(estimates_mtx, format = 'latex', align="c", escape = F, caption = "Estimates for $\\alpha$ and $\\beta$")  %>% kable_styling(latex_options = c("hold_position"))  
+
+kable(estimates_mtx, format = 'latex', align="c", escape = F, 
+      caption = "Values of $\\alpha$ and $\\beta$ that maximises  $\\pi$($\\alpha$,$\\beta$|x)") %>% 
+  kable_styling(latex_options = c("hold_position"))  
 ```
 
 ## (iv) Function to obtain marginal distribution of $\alpha|x$ using numerical integration
 
-```{r alpham}
+We want to obtain  $\pi(\alpha| \pmb x)$ up to a proportionality constant, that is, $$\pi(\alpha| \pmb x) \propto \int_{\pmb \beta} \pi(\alpha) \pi(\pmb \beta) L(\pmb \alpha, \pmb \beta, \pmb x)d \pmb \beta.$$
 
+```{r alpham}
+require(cubature)
+
+gfunc.int = function(params, x)
+{
+    alpha = params[1]
+    beta  = params[2]
+    return( dunif(alpha, min = 0, max = 5) * dgamma(beta, shape = 4, rate = 8) * L(alpha, beta, x) )
+}
+
+m_x = adaptIntegrate(gfunc.int, lowerLimit = c(0.0001, 0.0001), upperLimit = c(5, 2), x = x_data)$integral
+
+
+gfunc.int_beta =  Vectorize(gfunc, vectorize.args = c("beta"))
+alpham = function(alpha, x)
+{
+   numerator   = integrate(gfunc.int_beta, lower = 0.0001, upper = 2, alpha = alpha, x = x)$value
+   denominator = m_x
+   return( numerator / denominator  )
+}
+alpham.vec = Vectorize(alpham, vectorize.args = "alpha")
+
+n = 1000
+x = seq(from = 0, to = 5, length.out = n)
+y = NULL
+
+for(i in 1:n)
+{
+   y[i] = alpham(x[i], x_data)
+}
+
+plot(y ~ x, 
+     col  = 'red',
+     lty  = 1,
+     type = 'l',
+     xlab = expression(alpha), 
+     ylab = "",
+     main = expression(paste("Proportional to ", pi, "(", alpha, "|x)")))
 ```
+
 
 ## (v) Estimates of the posterior mean and variance of $\alpha$
 
 ```{r estimates}
+MeanIntegrand = function(alpha, x)
+{
+  return( alpha * alpham(alpha, x) )
+}
+MeanIntegrand.vec = Vectorize(MeanIntegrand, vectorize.args = c("alpha"))
+mean = integrate(MeanIntegrand.vec, lower = 2, upper = 3, x = x_data)$value
 
+VarIntegrand = function(alpha, x)
+{
+  return( alpha^2 * alpham(alpha, x) )
+}
+VarIntegrand.vec = Vectorize(VarIntegrand, vectorize.args = c("alpha"))
+xx = integrate(VarIntegrand.vec, lower = 2, upper = 3, x = x_data)$value
+variance =  xx - mean^2
+
+c('Mean' = mean,
+  'Variance' = variance)
 ```
 
 ## (vi) Acceptance-rejection method for inference on $\alpha$
 
-```{r ar}
+```{r plotAR}
+plot(y ~ x, 
+     col  = 'red',
+     lty  = 1,
+     type = 'l',
+     xlab = expression(alpha), 
+     ylab = "",
+     main = expression(paste("Proportional to ", pi, "(", alpha, "|x)")))
 
+set.seed(1)
+n = 1000
+xx <- runif(n, min=2, max=3)
+yy <- runif(n, min=0, max=5)
+#points(xx, yy, pch = 19, cex = 0.5, col="blue")
+
+retained_ids = yy <= alpham.vec(xx, x_data)
+points(xx[retained_ids], yy[retained_ids], pch = 19, cex = 0.2, col="blue")
+```
+
+```{r ar}
+# Provides posterior draws (of at least 20 000) from alpha|x
+set.seed(1)
+
+ar = function(n = 1000)
+{
+  xx <- runif(n, min=2, max=3)
+  yy <- runif(n, min=0, max=5)
+  retained_ids = yy <= alpham.vec(xx, x_data)
+  
+  draws = xx[retained_ids]
+  return(draws)
+}
+
+draws = ar()
+length(draws)
+c("mean" = mean(draws),
+  "variance" = var(draws))
 ```
 
