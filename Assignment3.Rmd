@@ -14,11 +14,14 @@ header-includes: \usepackage{float} \makeatletter\renewcommand*{\fps@figure}{H}\
 ---
 This assignment involves the use of Bayesian Analysis methods to solve 'The Lighthouse Problem', where we attempt to draw inference on the coordinates of a lighthouse at an unknown location in the sea given a series of flashes emitted by the lighthouse that are observed at different points on the coastline.
 
-## (i) Derivation of posterior distribution of $\alpha,\beta|x$
+# Questions
+## (i) Derivation of posterior distribution of $\alpha,\beta| \pmb x$
 
 We want to derive the posterior distribution of $\alpha,\beta|\boldsymbol{x}$, which can be expressed as:
 $$\pi(\alpha,\beta|\boldsymbol{x}) = \frac{\pi(\alpha,\beta) \text{L}(\alpha,\beta;\boldsymbol{x})}{m(\boldsymbol{x})}= \frac{g(\alpha,\beta;\boldsymbol{x})}{m(\boldsymbol{x})},$$ where 
 $g(\alpha,\beta;\boldsymbol{x})=\pi(\alpha,\beta) \text{L}(\alpha,\beta;\boldsymbol{x})$.
+
+We proceed by calculating each of these components individually:
 
 #### Prior: $\pi(\alpha,\beta)$
 
@@ -36,7 +39,7 @@ So let $\theta_i$ be the angle of inclination of the line joining the lighthouse
 
 Now the problem definition allows us to make the assumption that $\theta_i \sim\text{U}(\theta_l,\theta_u)$, which yields the p.d.f. of $\theta_i$ as $\pi(\theta_i)=\frac{1}{\theta_u-\theta_l}=\frac{1}{\text{A}(\alpha,\beta)}$, where we define $\text{A}(\alpha,\beta) = \theta_u-\theta_l$.
 
-Applying an appropriate univariate transformation, we obtain that $f(x_i|\alpha,\beta)=\frac{1}{\text{A}(\alpha,\beta)}\begin{vmatrix}\frac{d \theta_i}{d {x_i}}\end{vmatrix}$ where $\frac{d \theta_i}{d {x_i}}=\frac{d}{d {x_i}}\arctan(\frac{x_i-\alpha}{\beta})=\frac{\beta}{\beta^2+(x_k-\alpha)^2}$
+Applying an appropriate univariate transformation, we obtain that $f(x_i|\alpha,\beta)=\frac{1}{\text{A}(\alpha,\beta)}\begin{vmatrix}\frac{d \theta_i}{d {x_i}}\end{vmatrix}$ where $\frac{d \theta_i}{d {x_i}}=\frac{d}{d {x_i}}\arctan(\frac{x_i-\alpha}{\beta})=\frac{\beta}{\beta^2+(x_k-\alpha)^2}.$
 Since $\beta>0$, we get that $\frac{\beta}{\beta^2+(x_k-\alpha)^2}>0$, and so  $f(x_i|\alpha,\beta)=\frac{1}{\text{A}(\alpha,\beta)}\cdot\frac{\beta}{\beta^2+(x_i-\alpha)^2}$.
 
 Substituting into the above formula for the likelihood gives us our **likelihood** function:
@@ -44,19 +47,30 @@ $$\text{L}(\alpha,\beta, \boldsymbol{x})=\prod_{i=1}^{200} f(x_i|\alpha,\beta) =
 
 #### Predictive pdf of x: $m(\boldsymbol{x})$
 
-By the Law of Total Probability, we have that $$m(\boldsymbol{x})=\int_{0}^5 \int_{0}^{\infty} \pi(\alpha,\beta) \text{L}(\alpha,\beta;\boldsymbol{x}) d\beta d\alpha$$ where $\pi(\alpha,\beta)=\frac{2048\beta^3 e^{-8\beta}}{15}$ and $\text{L}(\alpha,\beta, \boldsymbol{x})= \prod_{i=1}^{200} \frac{1}{\text{A}(\alpha,\beta)}\cdot\frac{\beta}{\beta^2+(x_i-\alpha)^2}$
+By the Law of Total Probability, we have that $$m(\boldsymbol{x})=\int_{0}^5 \int_{0}^{\infty} \pi(\alpha,\beta) \text{L}(\alpha,\beta;\boldsymbol{x}) d\beta d\alpha$$ where $\pi(\alpha,\beta)=\frac{2048\beta^3 e^{-8\beta}}{15}$ and $\text{L}(\alpha,\beta, \boldsymbol{x})= \prod_{i=1}^{200} \frac{1}{\text{A}(\alpha,\beta)}\cdot\frac{\beta}{\beta^2+(x_i-\alpha)^2}$, as derived above.
+
+#### Resulting posterior distribution of $\alpha,\beta| \pmb x$
+
+Combining the above expressions, we thus get that $$\pi(\alpha,\beta|\boldsymbol{x}) = \frac{g(\alpha,\beta;\boldsymbol{x})}{m(\boldsymbol{x})},$$ where \label{sec:g}
+$$ g(\alpha,\beta;\boldsymbol{x})=\pi(\alpha,\beta) \text{L}(\alpha,\beta;\boldsymbol{x}),$$
+$$\pi(\alpha,\beta)=\frac{2048\beta^3 e^{-8\beta}}{15},$$
+,$$\text{L}(\alpha,\beta, \boldsymbol{x})= \prod_{i=1}^{200} \frac{1}{\text{A}(\alpha,\beta)}\cdot\frac{\beta}{\beta^2+(x_i-\alpha)^2},$$
+$$\text{A}(\alpha,\beta) = \arctan(\frac{5-\alpha}{\beta}) + \arctan(\frac{\alpha}{\beta}),$$
+and finally $$m(\boldsymbol{x})=\int_{0}^5 \int_{0}^{\infty} \pi(\alpha,\beta) \text{L}(\alpha,\beta;\boldsymbol{x}) d\beta d\alpha.$$
 
 ## (ii) Function to calculate g($\alpha$,$\beta$;x) and obtain contour plot
-
 
 ```{r loadData, include=FALSE}
 load("~/Documents/UCT/3rd Year/STA3043S/Assignments/Assignment3/Assignment3Data2019.RData")
 x_data = Data['wszsha001',]
 ```
 
-The following functions below are used to calculate g($\alpha$,$\beta$;x), by means of helper functions A and L.
+The R function `gfunc` (see \hyperref[sec:appendix]{\textbf{Appendix}}) was written to calculate g($\alpha,\beta; \pmb x$), using the expression derived in  \hyperref[sec:g]{\textbf{Question (i)}} above.
 
-```{r gfunc}
+```{r gfunc, echo=FALSE}
+
+# ================== Question (ii) =====================
+
 # A(alpha, beta) is defined as the difference between the upper and lower bounds for theta
 A = function(alpha, beta)
 {
@@ -77,15 +91,15 @@ gfunc = function(alpha, beta, x)
     return( prior_alpha * prior_beta * L(alpha, beta, x) )
 }
 gfunc.vec = Vectorize(gfunc, vectorize.args = c("alpha","beta"))
+
 ```
 
-We use the above function to obtain the following Contour Plot of the joint posterior distribution of the
-two parameters with the $\alpha$-axis ranging between (0, 5) and the $\beta$-axis ranging between (0, 1).
+We then create a sequence of $\alpha$ values ranging between 0 and 5, and a sequence of $\beta$ values between 0 and 1.5. The function described above is then evaluated at each $\alpha$ and $\beta$ combination (i.e. we evaluate g($\alpha,\beta; \pmb x$) at each combination) to obtain the contour plot proportional to $\pi(\alpha,\beta| \pmb x)$ below.
 
 ```{r contourPlot, echo=FALSE, fig.cap="Contour Plot"}
 n = 100
 alpha_range = seq(from = 0, to = 5, length.out = n)
-beta_range  = seq(from = 0, to = 1, length.out = n)
+beta_range  = seq(from = 0, to = 1.5, length.out = n)
 g = outer(alpha_range, beta_range, FUN = gfunc.vec, x_data)
 
 contour(x = alpha_range, 
@@ -100,17 +114,34 @@ contour(x = alpha_range,
         nlevels = 10)
 ```
 
+Notice how highly concentrated the plot is around the point $\alpha \approx 2.6$ and $\beta \approx 0.8$. This corresponds to a significant 'spike' in the three dimensional surface around this point. We will continue our discussion of this plot in \hyperref[sec:iii]{\textbf{Question (iii)}} below.
+
+```{r eval=FALSE, include=FALSE}
+library(plotly)
+plot_ly(x = alpha_range, 
+        y = beta_range, 
+        z = g) %>% add_surface()
+```
+
+
 ## (iii) Values of $\alpha$, $\beta$ that maximises $\pi$($\alpha$,$\beta$|x)
 
-The appropriate values are **2.5593** for alpha and **0.8415** for beta.
+\label{sec:iii}
 
-```{r maximise, echo=TRUE}
+We now want to obtain the values of $\alpha$, $\beta$ that maximises $\pi$($\alpha$,$\beta | \pmb x$). This corresponds to the point inside the innermost contour in the contour plot above. Note that $m(\pmb x)$ is a constant, and that the log function is a mononotonically increasing function. Thus the values that maximise $\pi$($\alpha$,$\beta | \pmb x$) are the same as the values that maximise $\text{log}(g(\alpha,\beta; \pmb x))$.
+
+```{r maximise, echo=FALSE}
+
+# ================== Question (iii) =====================
+
 # A function that returns a value proportional to the negative log of the posterior
 negLogPost = function(params, x)
 {
     alpha = params[1]
     beta  = params[2]
-    return( - log( dunif(alpha, 0, 5) * dgamma(beta, 4, 8) * L(alpha, beta, x) ) )
+    prior_alpha = dunif(alpha, min = 0, max = 5)
+    prior_beta  = dgamma(beta, shape = 4, rate = 8)
+    return( - log( prior_alpha * prior_beta * L(alpha, beta, x) ) )
 }
 
 estimates = optim( par = c(2.5, 0.5), 
@@ -122,7 +153,9 @@ estimates = optim( par = c(2.5, 0.5),
 names(estimates) = c('alpha', 'beta')
 ```
 
-```{r tableForEstimates}
+We then use a numerical optimization technique in R to obtain the resulting maximising values of $\alpha$, $\beta$ below.
+ 
+```{r tableForEstimates, echo=FALSE}
 library(knitr)
 library(kableExtra)
 
@@ -136,36 +169,49 @@ kable(estimates_mtx, format = 'latex', align="c", escape = F,
   kable_styling(latex_options = c("hold_position"))  
 ```
 
-## (iv) Function to obtain marginal distribution of $\alpha|x$ using numerical integration
+## (iv) Function to obtain marginal distribution of $\alpha|\pmb x$ using numerical integration
 
-We want to obtain  $\pi(\alpha| \pmb x)$ up to a proportionality constant, that is, $$\pi(\alpha| \pmb x) \propto \int_{\pmb \beta} \pi(\alpha) \pi(\pmb \beta) L(\pmb \alpha, \pmb \beta, \pmb x)d \pmb \beta.$$
+The function `alpham` below uses numerical integration to obtain the marginal distribution of $\alpha|x$,  given by $$\pi(\alpha| \pmb x) = \frac{ \int_{\pmb \beta} \pi(\alpha) \pi(\pmb \beta) L(\pmb \alpha, \pmb \beta, \pmb x)d \pmb \beta.}{m(\pmb x)}.$$
 
-```{r alpham}
-require(cubature)
+```{r alpham, echo=FALSE}
+
+# ================== Question (iv) =====================
+
+library(cubature)
 
 gfunc.int = function(params, x)
 {
     alpha = params[1]
     beta  = params[2]
-    return( dunif(alpha, min = 0, max = 5) * dgamma(beta, shape = 4, rate = 8) * L(alpha, beta, x) )
+    prior_alpha = dunif(alpha, min = 0, max = 5)
+    prior_beta  = dgamma(beta, shape = 4, rate = 8)
+    return( prior_alpha * prior_beta * L(alpha, beta, x) )
 }
 
-m_x = adaptIntegrate(gfunc.int, lowerLimit = c(0.0001, 0.0001), upperLimit = c(5, 2), x = x_data)$integral
+m_x = adaptIntegrate(gfunc.int, 
+                     lowerLimit = c(0.0001, 0.0001), 
+                     upperLimit = c(5, 1.5), 
+                     x = x_data)$integral
 
 
 gfunc.int_beta =  Vectorize(gfunc, vectorize.args = c("beta"))
 alpham = function(alpha, x)
 {
-   numerator   = integrate(gfunc.int_beta, lower = 0.0001, upper = 2, alpha = alpha, x = x)$value
+   numerator   = integrate(gfunc.int_beta, 
+                           lower = 0.0001, 
+                           upper = 1.5, 
+                           alpha = alpha, 
+                           x = x)$value
    denominator = m_x
    return( numerator / denominator  )
 }
 alpham.vec = Vectorize(alpham, vectorize.args = "alpha")
+```
 
+```{r plotDbn, echo=FALSE, fig.cap = "Density function of the marginal distribution of $\\alpha| \\pmb x$"}
 n = 1000
-x = seq(from = 0, to = 5, length.out = n)
+x = seq(from = 1.5, to = 3.5, length.out = n)
 y = NULL
-
 for(i in 1:n)
 {
    y[i] = alpham(x[i], x_data)
@@ -177,13 +223,17 @@ plot(y ~ x,
      type = 'l',
      xlab = expression(alpha), 
      ylab = "",
-     main = expression(paste("Proportional to ", pi, "(", alpha, "|x)")))
+     main = expression(paste(pi, "(", alpha, "|x)")))
 ```
-
 
 ## (v) Estimates of the posterior mean and variance of $\alpha$
 
-```{r estimates}
+The below code is used to provide estimates for the posterior mean and variance of $\alpha.$
+
+```{r estimates, echo=FALSE}
+
+# ================== Question (v) =====================
+
 MeanIntegrand = function(alpha, x)
 {
   return( alpha * alpham(alpha, x) )
@@ -196,51 +246,82 @@ VarIntegrand = function(alpha, x)
   return( alpha^2 * alpham(alpha, x) )
 }
 VarIntegrand.vec = Vectorize(VarIntegrand, vectorize.args = c("alpha"))
-xx = integrate(VarIntegrand.vec, lower = 2, upper = 3, x = x_data)$value
-variance =  xx - mean^2
+x_sq = integrate(VarIntegrand.vec, lower = 2, upper = 3, x = x_data)$value
+variance =  x_sq - mean^2
 
-c('Mean' = mean,
-  'Variance' = variance)
+headings = c('Mean', 'Variance') 
+estimates_mtx <- matrix(c(round(mean, 4), round(variance, 4)), ncol = 2)
+colnames(estimates_mtx) <- c(headings)
+
+kable(estimates_mtx, format = 'latex', align="c", escape = F, 
+      caption = "Estimates of the posterior mean and variance of $\\alpha$") %>% 
+  kable_styling(latex_options = c("hold_position")) 
 ```
 
 ## (vi) Acceptance-rejection method for inference on $\alpha$
 
-```{r plotAR}
-plot(y ~ x, 
-     col  = 'red',
-     lty  = 1,
-     type = 'l',
-     xlab = expression(alpha), 
-     ylab = "",
-     main = expression(paste("Proportional to ", pi, "(", alpha, "|x)")))
+We use the acceptance-rejection method to provide draws from $\alpha| \pmb x$, and then use these draws to provide estimates of the posterior mean and variance of $\alpha.$
 
-set.seed(1)
+```{r plotAR, echo=FALSE}
+
+# ================== Question (vi) =====================
+
+# plot(y ~ x, 
+#      col  = 'red',
+#      lty  = 1,
+#      type = 'l',
+#      xlab = expression(alpha), 
+#      ylab = "",
+#      main = expression(paste(pi, "(", alpha, "|x)")))
+
+set.seed(2019)
 n = 1000
-xx <- runif(n, min=2, max=3)
-yy <- runif(n, min=0, max=5)
-#points(xx, yy, pch = 19, cex = 0.5, col="blue")
+xx <- runif(n, min=2.25, max=2.85)
+yy <- runif(n, min=0, max=4.6) # since max(y) = 4.579861 where y has the density values 
 
 retained_ids = yy <= alpham.vec(xx, x_data)
-points(xx[retained_ids], yy[retained_ids], pch = 19, cex = 0.2, col="blue")
+# points(xx[retained_ids], yy[retained_ids], pch = 19, cex = 0.2, col="blue")
 ```
 
-```{r ar}
+```{r ar, echo=FALSE}
 # Provides posterior draws (of at least 20 000) from alpha|x
-set.seed(1)
+set.seed(2019)
 
-ar = function(n = 1000)
+ar = function(num_to_accept = 20000)
 {
-  xx <- runif(n, min=2, max=3)
-  yy <- runif(n, min=0, max=5)
-  retained_ids = yy <= alpham.vec(xx, x_data)
-  
-  draws = xx[retained_ids]
+  count = 0
+  draws = NULL
+  while(count <= num_to_accept)
+  {
+    x <- runif(1, min=2.25, max=2.85)
+    y <- runif(1, min=0, max=4.6)
+    if(y < alpham(x, x_data))
+    {
+       draws[count] = x
+       count = count + 1
+    }
+  }
   return(draws)
 }
 
 draws = ar()
-length(draws)
-c("mean" = mean(draws),
-  "variance" = var(draws))
+# length(draws)
+
+headings = c('Mean', 'Variance') 
+estimates_mtx <- matrix(c(round(mean(draws), 4), round(var(draws), 4)), ncol = 2)
+colnames(estimates_mtx) <- c(headings)
+kable(estimates_mtx, format = 'latex', align="c", escape = F, 
+      caption = "Estimates of the posterior mean and variance of $\\alpha$ using Acceptance-Rejection") %>% 
+  kable_styling(latex_options = c("hold_position")) 
 ```
 
+Notice that these estimates are very similar to the estimates obtained in (v).
+
+**Include histogram - check this corresponds with above**
+
+# Appendix
+\label{sec:appendix}
+
+```{r ref.label = knitr::all_labels(), echo=TRUE, eval=FALSE}
+
+```
