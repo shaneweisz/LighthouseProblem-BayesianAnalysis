@@ -12,6 +12,7 @@ output:
     toc_depth: '3'
 header-includes: \usepackage{float} \makeatletter\renewcommand*{\fps@figure}{H}\makeatother
 ---
+
 This assignment involves the use of Bayesian Analysis methods to solve 'The Lighthouse Problem', where we attempt to draw inference on the coordinates of a lighthouse at an unknown location in the sea given a series of flashes emitted by the lighthouse that are observed at different points on the coastline.
 
 # Questions
@@ -96,7 +97,7 @@ gfunc.vec = Vectorize(gfunc, vectorize.args = c("alpha","beta"))
 
 We then create a sequence of $\alpha$ values ranging between 0 and 5, and a sequence of $\beta$ values between 0 and 1.5. The function described above is then evaluated at each $\alpha$ and $\beta$ combination (i.e. we evaluate g($\alpha,\beta; \pmb x$) at each combination) to obtain the contour plot proportional to $\pi(\alpha,\beta| \pmb x)$ below.
 
-```{r contourPlot, echo=FALSE, fig.cap="Contour Plot"}
+```{r contourPlot, echo=FALSE, fig.cap="Contour Plot", fig.width = 4.5, fig.height = 4.5, fig.align = 'center'}
 n = 100
 alpha_range = seq(from = 0, to = 5, length.out = n)
 beta_range  = seq(from = 0, to = 1.5, length.out = n)
@@ -123,12 +124,11 @@ plot_ly(x = alpha_range,
         z = g) %>% add_surface()
 ```
 
-
 ## (iii) Values of $\alpha$, $\beta$ that maximises $\pi$($\alpha$,$\beta$|x)
 
 \label{sec:iii}
 
-We now want to obtain the values of $\alpha$, $\beta$ that maximises $\pi$($\alpha$,$\beta | \pmb x$). This corresponds to the point inside the innermost contour in the contour plot above. Note that $m(\pmb x)$ is a constant, and that the log function is a mononotonically increasing function. Thus the values that maximise $\pi$($\alpha$,$\beta | \pmb x$) are the same as the values that maximise $\text{log}(g(\alpha,\beta; \pmb x))$.
+We now want to obtain the values of $\alpha$, $\beta$ that maximises $\pi$($\alpha$,$\beta | \pmb x$). Note that $m(\pmb x)$ is a constant, and that the log function is a mononotonically increasing function. Thus the values that maximise $\pi$($\alpha$,$\beta | \pmb x$) are the same as the values that maximise $\text{log}(g(\alpha,\beta; \pmb x))$.
 
 ```{r maximise, echo=FALSE}
 
@@ -153,7 +153,7 @@ estimates = optim( par = c(2.5, 0.5),
 names(estimates) = c('alpha', 'beta')
 ```
 
-We then use a numerical optimization technique in R to obtain the resulting maximising values of $\alpha$, $\beta$ below.
+We then use a numerical optimization technique in R to maximise $\text{log}(g(\alpha,\beta; \pmb x))$ and obtain the resulting maximising values of $\alpha$ and $\beta$ below.
  
 ```{r tableForEstimates, echo=FALSE}
 library(knitr)
@@ -169,9 +169,13 @@ kable(estimates_mtx, format = 'latex', align="c", escape = F,
   kable_styling(latex_options = c("hold_position"))  
 ```
 
+Notice that these values correspond to the point inside the innermost contour in the contour plot above.
+
 ## (iv) Function to obtain marginal distribution of $\alpha|\pmb x$ using numerical integration
 
-The function `alpham` below uses numerical integration to obtain the marginal distribution of $\alpha|x$,  given by $$\pi(\alpha| \pmb x) = \frac{ \int_{\pmb \beta} \pi(\alpha) \pi(\pmb \beta) L(\pmb \alpha, \pmb \beta, \pmb x)d \pmb \beta.}{m(\pmb x)}.$$
+The R function `alpham` (see \hyperref[sec:appendix]{\textbf{Appendix}}) was written to obtain the marginal distribution of $\alpha|x$,  given by $$\pi(\alpha| \pmb x) = \frac{ \int_{ \beta} \pi(\alpha) \pi( \beta) \text{L}( \alpha, \beta, \pmb x)d \beta.}{m(\pmb x)}, $$ using the expressions derived in \hyperref[sec:g]{\textbf{Question (i)}} above.
+
+The function uses numerical integration in R to first evaluate the integral given by $$ m(\pmb x)=\int_{0}^5 \int_{0}^{\infty} \pi(\alpha,\beta) \text{L}(\alpha,\beta;\pmb x) d\beta d\alpha, $$ and then to integrate the above joint posterior density of $\alpha$ and $\beta$ with respect to $\beta$ to obtain the density function of the marginal distribution of $\alpha|\pmb x$. This density function is then evaluated across a range of $\alpha$ values between 1.5 and 3.5 and plotted below. 
 
 ```{r alpham, echo=FALSE}
 
@@ -208,7 +212,7 @@ alpham = function(alpha, x)
 alpham.vec = Vectorize(alpham, vectorize.args = "alpha")
 ```
 
-```{r plotDbn, echo=FALSE, fig.cap = "Density function of the marginal distribution of $\\alpha| \\pmb x$"}
+```{r plotDbn, echo=FALSE, fig.cap = "Density function of the marginal distribution of $\\alpha| \\pmb x$", , fig.width = 4.5, fig.height = 4.5, fig.align = 'center'}
 n = 1000
 x = seq(from = 1.5, to = 3.5, length.out = n)
 y = NULL
@@ -228,7 +232,13 @@ plot(y ~ x,
 
 ## (v) Estimates of the posterior mean and variance of $\alpha$
 
-The below code is used to provide estimates for the posterior mean and variance of $\alpha.$
+The above-calculated density function of $\alpha|\pmb x$ can now be used to provide estimates for the posterior mean and variance of $\alpha.$
+
+For the mean, we evaluate the integral $$\text{E[}\alpha | \pmb x \text{]} = \int_{\alpha}\alpha\cdot\pi(\alpha | \pmb x) d\alpha$$.
+
+For the variance, we calculate $$\text{Var[}\alpha | \pmb x \text{]} = \text{E[}\alpha ^ {2} | \pmb x \text{]} - (\text{E[}\alpha | \pmb x \text{]})^{2}, $$ where
+$$\text{E[}\alpha^{2} | \pmb x \text{]} = \int_{\alpha}\alpha^{2}\cdot\pi(\alpha | \pmb x) d\alpha$$
+We use numerical integration in R to evaluate these integrals and obtain the posterior estimates for the mean and variance of $\alpha$ given below.
 
 ```{r estimates, echo=FALSE}
 
@@ -260,19 +270,22 @@ kable(estimates_mtx, format = 'latex', align="c", escape = F,
 
 ## (vi) Acceptance-rejection method for inference on $\alpha$
 
-We use the acceptance-rejection method to provide draws from $\alpha| \pmb x$, and then use these draws to provide estimates of the posterior mean and variance of $\alpha.$
+We now use the acceptance-rejection method to provide 20 000 draws from $\alpha| \pmb x$, and then use these draws to provide estimates of the posterior mean and variance of $\alpha.$ 
 
-```{r plotAR, echo=FALSE}
+The method used to perform this procedure is as follows. We simulate a random (x,y) point in the rectange with corners (-2.25, 0), (2.85, 0), (-2.25, 4.6) and (2.85, 4.6). Note that this region contains the curve of the density function of $\alpha| \pmb x$ for the $\alpha$ values where the density is not negligible (i.e. non-zero). For each simulated (x, y) point, we accept the point (and store the corresponding $\alpha$ value) if it lies below the curve of $\pi(\alpha| \pmb x)$, otherwise we reject the point. We continue simulating points until 20 000 points have been accepted. The $\alpha$ values corresponding to the accepted points can be proven to have the same distribution as $\alpha| \pmb x$, and hence correspond to draws from $\alpha| \pmb x$. A sample plot of the simulated points which would be accepted during this procedure is depicted below.
+
+```{r plotAR, echo=FALSE, fig.cap = "Accepted points from Acceptance-Rejection procedure", fig.width = 4, fig.height = 4, fig.align = 'center'}
 
 # ================== Question (vi) =====================
 
-# plot(y ~ x, 
-#      col  = 'red',
-#      lty  = 1,
-#      type = 'l',
-#      xlab = expression(alpha), 
-#      ylab = "",
-#      main = expression(paste(pi, "(", alpha, "|x)")))
+# For a sample plot of the accepted simulated points
+plot(y ~ x,
+     col  = 'red',
+     lty  = 1,
+     type = 'l',
+     xlab = expression(alpha),
+     ylab = "",
+     main = expression(paste(pi, "(", alpha, "|x)")))
 
 set.seed(2019)
 n = 1000
@@ -280,18 +293,20 @@ xx <- runif(n, min=2.25, max=2.85)
 yy <- runif(n, min=0, max=4.6) # since max(y) = 4.579861 where y has the density values 
 
 retained_ids = yy <= alpham.vec(xx, x_data)
-# points(xx[retained_ids], yy[retained_ids], pch = 19, cex = 0.2, col="blue")
+
+points(xx[retained_ids], yy[retained_ids], pch = 19, cex = 0.2, col="blue")
 ```
 
-```{r ar, echo=FALSE}
-# Provides posterior draws (of at least 20 000) from alpha|x
-set.seed(2019)
+The below histogram of the 20 000 draws, with the true density function of $\alpha| \pmb x$ superimposed in red, is visual evidence that these draws have the distribution of $\alpha| \pmb x$.
 
+```{r arHist, echo=FALSE, fig.cap = "Histogram of draws obtained from $\\alpha|x$ via Acceptance-Rejection method"}
+
+# Provides posterior draws (of at least 20 000) from alpha|x
 ar = function(num_to_accept = 20000)
 {
   count = 0
   draws = NULL
-  while(count <= num_to_accept)
+  while(count < num_to_accept)
   {
     x <- runif(1, min=2.25, max=2.85)
     y <- runif(1, min=0, max=4.6)
@@ -305,8 +320,31 @@ ar = function(num_to_accept = 20000)
 }
 
 draws = ar()
-# length(draws)
 
+hist(draws, 
+     freq = F, 
+     col = 'grey',
+     xlab = expression(alpha),
+     main = expression(paste("Histogram of 20 000 draws from ", alpha, "|x")))
+
+lines(y ~ x,
+     col  = 'red',
+     lty  = 1,
+     type = 'l')
+
+legend('topright',
+       legend = c(expression(paste("Draws from ", alpha, "|x")),
+                  expression(paste("True density of ", alpha, "|x"))),
+       fill = c('grey','red'))
+
+```
+
+
+Using these draws, we can then calculate the sample mean and sample variance as another means of providing a posterior estimate for the mean and variance of $\alpha$. These estimates are tabulated below:
+
+```{r ar, echo=FALSE}
+
+# Tabulate the results
 headings = c('Mean', 'Variance') 
 estimates_mtx <- matrix(c(round(mean(draws), 4), round(var(draws), 4)), ncol = 2)
 colnames(estimates_mtx) <- c(headings)
@@ -315,10 +353,9 @@ kable(estimates_mtx, format = 'latex', align="c", escape = F,
   kable_styling(latex_options = c("hold_position")) 
 ```
 
-Notice that these estimates are very similar to the estimates obtained in (v).
+We now compare these estimates to those obtained in (v), and notice that they are very simlar. The posterior draws produce a mean of **2.5587** compared to **2.5991** obtained in (v) via integration, and a similarly close estimate for variances of **0.0075** compared to **0.0076** from integration. It makes sense that these estimates are consistent, because whilst the methods are different, they are still estimating the same parameter and so would be expected to produce similar estimates if performed correctly.
 
-**Include histogram - check this corresponds with above**
-
+\newpage
 # Appendix
 \label{sec:appendix}
 
